@@ -1,0 +1,108 @@
+networks:
+  minecraft-network:
+    name: minecraft-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.23.0.0/16
+
+services:
+  router:
+    image: itzg/mc-router:latest
+    container_name: mc-router
+    networks:
+      minecraft-network:
+        ipv4_address: 172.23.0.2
+    depends_on:
+      - lazymc
+    environment:
+      MAPPING: |
+        mothscape.space=lazymc:25565
+        mothfall.world=lazymc:25565
+        # cabin.mothfall.world=lazymc:25566
+    ports:
+      - "25565:25565"
+    restart: unless-stopped
+
+  lazymc:
+    image: ghcr.io/joesturge/lazymc-docker-proxy:latest
+    container_name: lazymc
+    networks:
+      minecraft-network:
+        ipv4_address: 172.23.0.3
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./mothfall:/server/mothfall:ro
+      #- ./cabin:/server/cabin:ro
+    restart: unless-stopped
+
+  vanilla:
+    image: itzg/minecraft-server:latest
+    container_name: mothfall
+    networks:
+      minecraft-network:
+        ipv4_address: 172.23.0.4
+    labels:
+      # network
+      - lazymc.enabled=true
+      - lazymc.group=mothfall
+      - lazymc.server.address=mothfall:25565
+      - lazymc.port=25565
+      - lazymc.server.directory=/server/mothfall
+      # misc
+      - lazymc.public.version=1.21.11
+      - lazymc.public.protocol=774
+      - lazymc.time.minimum_online_time=300
+      - lazymc.join.hold.timeout=25
+      - lazymc.time.sleep_after=600
+    tty: true
+    stdin_open: true
+    restart: unless-stopped
+    environment:
+      EULA: "TRUE"
+      TYPE: "PURPUR"
+      VERSION: "1.21.11"
+      MEMORY: "6144M"
+      MOTD: "Welcome to mothfall.world! (1.21.11)"
+      TZ: "America/Toronto"
+    volumes:
+      - ./mothfall:/data
+
+#   modded:
+#     image: itzg/minecraft-server:latest
+#     container_name: cabin
+#     stop_grace_period: 30s
+#     networks:
+#       minecraft-network:
+#         ipv4_address: 172.23.0.5
+#     labels:
+#       # network
+#       - lazymc.enabled=true
+#       - lazymc.server.address=cabin:25565
+#       - lazymc.group=cabin
+#       - lazymc.port=25566
+#       - lazymc.server.directory=/server/cabin
+#       # misc
+#       - lazymc.public.version=1.20.1
+#       - lazymc.public.protocol=763
+#       - lazymc.server.forge=true
+#       - lazymc.time.minimum_online_time=180
+#       - lazymc.join.hold.timeout=30
+#       - lazymc.time.sleep_after=600
+#     tty: true
+#     stdin_open: true
+#     restart: no
+#     environment:
+#       EULA: "TRUE"
+#       TYPE: FORGE
+#       VERSION: "1.20.1"
+#       MEMORY: "6144M"
+#       MOTD: "§r\n§6ᴄᴀʙɪɴ (2.0.8)"
+#       ICON: "https://media.forgecdn.net/avatars/thumbnails/899/846/64/64/638346046780138525.png"
+#       PVP: "false"
+#       ENABLE_WHITELIST: "true"
+#       OPS: |-
+#         hodux
+#       TZ: "America/Toronto"
+#     volumes:
+#       - ./cabin:/data
