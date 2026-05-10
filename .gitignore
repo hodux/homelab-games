@@ -2,5 +2,3 @@
 # ignore game directories
 mothfall/
 cabin/
-# ignore hawser certs
-certs/
